@@ -1,2 +1,2 @@
 # Naive-Networks
-keras implementation of AlexNet, VGG16, VGG19 
+AlexNet, VGG16, VGG19 
