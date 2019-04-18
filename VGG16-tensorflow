@@ -1,0 +1,211 @@
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import skimage
+from skimage import io, transform
+import math
+
+def random_mini_batches(X, Y, mini_batch_size = 64, seed = 0):
+    np.random.seed(seed)           
+    m = X.shape[0]         
+    mini_batches = []
+    permutation = list(np.random.permutation(m))
+    shuffled_X = X[permutation,:,:,:]
+    shuffled_Y = Y[permutation,:]
+    num_complete_minibatches = math.floor(m/mini_batch_size) 
+    for k in range(0, num_complete_minibatches):
+        mini_batch_X = shuffled_X[k * mini_batch_size : (k+1) * mini_batch_size,:,:,:]
+        mini_batch_Y = shuffled_Y[k * mini_batch_size : (k+1) * mini_batch_size,:]
+        mini_batch = (mini_batch_X, mini_batch_Y)
+        mini_batches.append(mini_batch)
+    if m % mini_batch_size != 0:
+        mini_batch_X = shuffled_X[num_complete_minibatches * mini_batch_size : m,:,:,:]
+        mini_batch_Y = shuffled_Y[num_complete_minibatches * mini_batch_size : m,:]
+        mini_batch = (mini_batch_X, mini_batch_Y)
+        mini_batches.append(mini_batch)
+    return mini_batches
+    
+def create_placeholders():
+    X = tf.placeholder(tf.float32, shape=(None,224,224,3))
+    Y = tf.placeholder(tf.float32, shape=(None,2))
+    return X,Y
+    
+def initialize_parameters():
+    W11=tf.get_variable('W11',[3,3,3,64],initializer=tf.contrib.layers.xavier_initializer(seed = 0))
+    bias11=tf.get_variable('bias11',[224,224,64],initializer=tf.contrib.layers.xavier_initializer(seed = 1))
+    W12=tf.get_variable('W12',[3,3,64,64],initializer=tf.contrib.layers.xavier_initializer(seed = 2))
+    bias12=tf.get_variable('bias12',[224,224,64],initializer=tf.contrib.layers.xavier_initializer(seed = 3))
+    W21=tf.get_variable('W21',[3,3,64,128],initializer=tf.contrib.layers.xavier_initializer(seed = 4))
+    bias21=tf.get_variable('bias21',[112,112,128],initializer=tf.contrib.layers.xavier_initializer(seed = 5))
+    W22=tf.get_variable('W22',[3,3,128,128],initializer=tf.contrib.layers.xavier_initializer(seed = 6))
+    bias22=tf.get_variable('bias22',[112,112,128],initializer=tf.contrib.layers.xavier_initializer(seed = 7))
+    W31=tf.get_variable('W31',[3,3,128,256],initializer=tf.contrib.layers.xavier_initializer(seed = 8))
+    bias31=tf.get_variable('bias31',[56,56,256],initializer=tf.contrib.layers.xavier_initializer(seed = 9))
+    W32=tf.get_variable('W32',[3,3,256,256],initializer=tf.contrib.layers.xavier_initializer(seed = 10))
+    bias32=tf.get_variable('bias32',[56,56,256],initializer=tf.contrib.layers.xavier_initializer(seed = 11))
+    W33=tf.get_variable('W33',[3,3,256,256],initializer=tf.contrib.layers.xavier_initializer(seed = 12))
+    bias33=tf.get_variable('bias33',[56,56,256],initializer=tf.contrib.layers.xavier_initializer(seed = 13))
+    W41=tf.get_variable('W41',[3,3,256,512],initializer=tf.contrib.layers.xavier_initializer(seed = 14))
+    bias41=tf.get_variable('bias41',[28,28,512],initializer=tf.contrib.layers.xavier_initializer(seed = 15))
+    W42=tf.get_variable('W42',[3,3,512,512],initializer=tf.contrib.layers.xavier_initializer(seed = 16))
+    bias42=tf.get_variable('bias42',[28,28,512],initializer=tf.contrib.layers.xavier_initializer(seed = 17))
+    W43=tf.get_variable('W43',[3,3,512,512],initializer=tf.contrib.layers.xavier_initializer(seed = 18))
+    bias43=tf.get_variable('bias43',[28,28,512],initializer=tf.contrib.layers.xavier_initializer(seed = 19))
+    W51=tf.get_variable('W51',[3,3,512,512],initializer=tf.contrib.layers.xavier_initializer(seed = 20))
+    bias51=tf.get_variable('bias51',[14,14,512],initializer=tf.contrib.layers.xavier_initializer(seed = 21))
+    W52=tf.get_variable('W52',[3,3,512,512],initializer=tf.contrib.layers.xavier_initializer(seed = 22))
+    bias52=tf.get_variable('bias52',[14,14,512],initializer=tf.contrib.layers.xavier_initializer(seed = 23))
+    W53=tf.get_variable('W53',[3,3,512,512],initializer=tf.contrib.layers.xavier_initializer(seed = 24))
+    bias53=tf.get_variable('bias53',[14,14,512],initializer=tf.contrib.layers.xavier_initializer(seed = 25))
+    W1=tf.get_variable('W1',[4096,25088],initializer=tf.contrib.layers.xavier_initializer(seed = 26))
+    W2=tf.get_variable('W2',[4096,4096],initializer=tf.contrib.layers.xavier_initializer(seed = 27))
+    W3=tf.get_variable('W3',[2,4096],initializer=tf.contrib.layers.xavier_initializer(seed = 28))
+    b1=tf.zeros([4096,1])
+    b2=tf.zeros([4096,1])
+    b3=tf.zeros([2,1])
+    parameters = {"W1": W1,
+                  "W2": W2,
+                  "W3": W3,
+                  "W11": W11,
+                  "W12": W12,
+                  "W21": W21,
+                  "W22": W22,
+                  "W31": W31,
+                  "W32": W32,
+                  "W33": W33,
+                  "W41": W41,
+                  "W42": W42,
+                  "W43": W43,
+                  "W51": W51,
+                  "W52": W52,
+                  "W53": W53,
+                  "b1": b1,
+                  "b2": b2,
+                  "b3": b3,
+                  "bias11": bias11,
+                  "bias12": bias12,
+                  "bias21": bias21,
+                  "bias22": bias22,
+                  "bias31": bias31,
+                  "bias32": bias32,
+                  "bias33": bias33,
+                  "bias41": bias41,
+                  "bias42": bias42,
+                  "bias43": bias43,
+                  "bias51": bias51,
+                  "bias52": bias52,
+                  "bias53": bias53
+                 }
+    return parameters
+    
+ def forward_propagation(X, parameters):
+    W1 = parameters['W1']
+    W2 = parameters['W2']
+    W3 = parameters['W3']
+    W11 = parameters['W11']
+    W12 = parameters['W12']
+    W21 = parameters['W21']
+    W22 = parameters['W22']
+    W31 = parameters['W31']
+    W32 = parameters['W32']
+    W33 = parameters['W33']
+    W41 = parameters['W41']
+    W42 = parameters['W42']
+    W43 = parameters['W43']
+    W51 = parameters['W51']
+    W52 = parameters['W52']
+    W53 = parameters['W53']
+    bias11= parameters['bias11'] 
+    bias12= parameters['bias12']
+    bias21= parameters['bias21'] 
+    bias22= parameters['bias22']
+    bias31= parameters['bias31'] 
+    bias32= parameters['bias32']
+    bias33= parameters['bias33'] 
+    bias41= parameters['bias41']
+    bias42= parameters['bias42'] 
+    bias43= parameters['bias43']
+    bias51= parameters['bias51']
+    bias52= parameters['bias52'] 
+    bias53= parameters['bias53']
+    b1 = parameters['b1']
+    b2 = parameters['b2']
+    b3 = parameters['b3']
+    Z11 = tf.nn.conv2d(X,W11, strides = [1,1,1,1], padding = 'SAME')
+    Z11 = tf.nn.relu(tf.add(Z11,bias11))
+    Z12 = tf.nn.conv2d(Z11,W12, strides = [1,1,1,1], padding = 'SAME')
+    A12 = tf.nn.relu(tf.add(Z12,bias12))
+    P1 = tf.nn.max_pool(A12, ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'SAME')
+    Z21 = tf.nn.conv2d(P1,W21, strides = [1,1,1,1], padding = 'SAME')
+    A21 = tf.nn.relu(tf.add(Z21,bias21))
+    Z22 = tf.nn.conv2d(A21,W22, strides = [1,1,1,1], padding = 'SAME')
+    A22 = tf.nn.relu(tf.add(Z22,bias22))
+    P2 = tf.nn.max_pool(A22, ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'SAME')
+    Z31 = tf.nn.conv2d(P2,W31, strides = [1,1,1,1], padding = 'SAME')
+    A31 = tf.nn.relu(tf.add(Z31,bias31))
+    Z32 = tf.nn.conv2d(A31,W32, strides = [1,1,1,1], padding = 'SAME')
+    A32 = tf.nn.relu(tf.add(Z32,bias32))
+    Z33 = tf.nn.conv2d(A32,W33, strides = [1,1,1,1], padding = 'SAME')
+    A33 = tf.nn.relu(tf.add(Z33,bias33))
+    P3 = tf.nn.max_pool(A33, ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'SAME')
+    Z41 = tf.nn.conv2d(P3,W41, strides = [1,1,1,1], padding = 'SAME')
+    A41 = tf.nn.relu(tf.add(Z41,bias41))
+    Z42 = tf.nn.conv2d(A41,W42, strides = [1,1,1,1], padding = 'SAME')
+    A42 = tf.nn.relu(tf.add(Z42,bias42))
+    Z43 = tf.nn.conv2d(A42,W43, strides = [1,1,1,1], padding = 'SAME')
+    A43 = tf.nn.relu(tf.add(Z43,bias43))
+    P4 = tf.nn.max_pool(A43, ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'SAME')
+    Z51 = tf.nn.conv2d(P4,W51, strides = [1,1,1,1], padding = 'SAME')
+    A51 = tf.nn.relu(tf.add(Z51,bias51))
+    Z52 = tf.nn.conv2d(A51,W52, strides = [1,1,1,1], padding = 'SAME')
+    A52 = tf.nn.relu(tf.add(Z52,bias52))
+    Z53 = tf.nn.conv2d(A52,W53, strides = [1,1,1,1], padding = 'SAME')
+    A53 = tf.nn.relu(tf.add(Z53,bias53))
+    P5 = tf.nn.max_pool(A53, ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'SAME')
+    P5 = tf.contrib.layers.flatten(P5)
+    FC1 = tf.contrib.layers.fully_connected(P5, num_outputs = 4096, activation_fn=tf.nn.relu,weights_initializer=initializers.xavier_initializer(),biases_initializer=tf.zeros_initializer())
+    FC2 = tf.contrib.layers.fully_connected(FC1, num_outputs = 4096, activation_fn=tf.nn.relu,weights_initializer=initializers.xavier_initializer(),biases_initializer=tf.zeros_initializer())
+    FC3 = tf.contrib.layers.fully_connected(FC2, num_outputs = 2, activation_fn=tf.nn.softmax,weights_initializer=initializers.xavier_initializer(),biases_initializer=tf.zeros_initializer())
+    return FC3
+   
+   
+def compute_cost(Z,Y):
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=Z,labels=Y))
+    return cost
+    
+
+def model(X_train,Y_train,X_test,Y_test,print_cost = True):
+    costs = [] 
+    seed = 3 
+    m = X_train.shape[0] 
+    X,Y = create_placeholders() 
+    parameters = initialize_parameters() 
+    Z3 = forward_propagation(X,parameters) 
+    cost = compute_cost(Z3,Y) 
+    optimizer = tf.train.AdamOptimizer(learning_rate = 0.001).minimize(cost) 
+    init = tf.global_variables_initializer() 
+    with tf.Session() as sess: 
+        sess.run(init) 
+        for epoch in range(10): 
+            minibatch_cost = 0. 
+            num_minibatches = int(m / 64)+ 1 
+            seed = seed + 1 
+            minibatches = random_mini_batches(X_train, Y_train, 64, seed) 
+            for minibatch in minibatches: 
+                (minibatch_X, minibatch_Y) = minibatch 
+                _ , temp_cost= sess.run([optimizer, cost], feed_dict={X:minibatch_X, Y:minibatch_Y}) 
+                minibatch_cost += temp_cost / num_minibatches    
+            if print_cost == True and epoch % 1 == 0: 
+                print ("Cost after epoch %i: %f" % (epoch, minibatch_cost)) 
+            if print_cost == True and epoch % 1 == 0: 
+                costs.append(minibatch_cost)
+        parameters = sess.run(parameters)
+        print ("Parameters have been trained!")
+        correct_prediction = tf.equal(tf.argmax(Z3,1), tf.argmax(Y,1))    
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+        print ("Test Accuracy:", accuracy.eval({X: X_test, Y: Y_test}))
+
+    return parameters
+
+t = model(x_train,y_train,x_test,y_test)
