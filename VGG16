@@ -1,0 +1,92 @@
+import os
+import skimage
+from skimage import io, transform
+import math
+import keras
+import numpy as np
+import tensorflow as tf
+from keras import layers
+from keras.layers import Input, Add, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D, AveragePooling2D, MaxPooling2D
+from keras.models import Model, load_model
+from keras.preprocessing import image
+from keras.utils import layer_utils
+from keras.utils.data_utils import get_file
+from keras.applications.imagenet_utils import preprocess_input
+import pydot
+from IPython.display import SVG
+from keras.utils.vis_utils import model_to_dot
+from keras.utils import plot_model
+from keras.initializers import glorot_uniform
+import scipy.misc
+from matplotlib.pyplot import imshow
+from keras.regularizers import l2
+%matplotlib inline
+
+import keras.backend as K
+K.set_learning_phase(1)
+
+def VGG16(input_shape):
+    X_input = Input(shape=input_shape)
+    X = Conv2D(64, kernel_size=(3,3), strides=(1,1), padding='same')(X_input)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(64, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same')(X)
+
+
+    X = Conv2D(128, kernel_size=(3,3), strides=(1,1), padding='same', use_bias=True, kernel_initializer = glorot_uniform(seed=2), bias_initializer='zeros',bias_regularizer=l2(0.0002), kernel_regularizer=l2(0.0002))(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(128, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid')(X)
+
+    X = Conv2D(256, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(256, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(256, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid')(X)
+
+    X = Conv2D(512, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(512, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(512, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid')(X)
+
+    X = Conv2D(512, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(512, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = Conv2D(512, kernel_size=(3,3), strides=(1,1), padding='same')(X)
+    X = BatchNormalization(axis=3)(X)
+    X = Activation('relu')(X)
+    X = MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid')(X)
+
+    X = Flatten()(X)
+    X = Dense(4096, activation='relu')(X)
+    X = Dense(4096, activation='relu')(X)
+    Y = Dense(2, activation='softmax')(X)
+
+    model = Model(inputs = X_input, outputs = Y, name='VGG16')
+
+    return model
+    
+VGG16 = VGG16((224, 224, 3))
+VGG16.compile(optimizer=keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss='categorical_crossentropy', metrics=['accuracy'])
+VGG16.summary()
+VGG16.fit(x=x_train, y=y_train, batch_size=64, epochs=10)
