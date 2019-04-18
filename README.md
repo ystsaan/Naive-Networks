@@ -1,2 +1,2 @@
 # Naive-Networks
-AlexNet, VGG16, VGG19 
+Keras or tensorflow implementation of AlexNet, VGG16, VGG19 
